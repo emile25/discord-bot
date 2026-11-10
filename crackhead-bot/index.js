@@ -18,7 +18,7 @@ client.once('ready', async () => {
     try {
         const channel = await client.channels.fetch(channelId);
         if (channel) {
-            channel.send('Yo stelletje randdebielen, ik ben gekomen voor mijn kleine schatje emile MUAHUAHAUH **Crackhead Deluxe** is online en klaar om jullie brein te slopen met trivia! 🧠💥');
+            channel.send('Yo  **Crackhead Deluxe** is online en klaar om jullie brein te slopen met trivia! 🧠💥');
         }
     } catch (error) {
         console.error('Kon het kanaal niet vinden:', error);
@@ -27,7 +27,7 @@ client.once('ready', async () => {
 
 client.on('messageCreate', message => {
     if (message.content === '!ping') {
-        message.reply('Pong! 🏓');
+        message.reply('ik haat je STOP MET PINGEN');
     }
 });
 
