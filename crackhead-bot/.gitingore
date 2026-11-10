@@ -1,0 +1,16 @@
+# Node modules (dependencies)
+node_modules/
+
+# Gevoelige data / tokens
+.env
+config.json
+
+# Logs en debug bestanden
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Besturingssysteem bestanden
+.DS_Store
+Thumbs.db
