@@ -95,3 +95,72 @@ client.on('messageCreate', async (message) => {
         message.channel.send(`⏰ Tijd is om! Het antwoord was: **${gekozen.antwoord}**`);
     }
 });
+
+
+
+
+// ---- Aparte quiz met winstreak: !streakvraag ----
+// Gebruikt de lijst "vragen" van het !vraag-blok hierboven. Die lijst mag je niet weghalen.
+
+let streakUserId = null;
+let streakAantal = 2;
+let streakVraagBezig = false;
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (message.content !== '!streakvraag') return;
+
+    if (streakVraagBezig) {
+        return message.reply('Er loopt al een vraag, beantwoord die eerst!');
+    }
+    streakVraagBezig = true;
+
+    const gekozen = vragen[Math.floor(Math.random() * vragen.length)];
+    await message.channel.send(`🧠 **Vraag:** ${gekozen.vraag}\nJullie hebben 15 seconden!`);
+
+    const filter = (m) =>
+        !m.author.bot && m.content.trim().toLowerCase() === gekozen.antwoord;
+
+    try {
+        const verzameld = await message.channel.awaitMessages({
+            filter,
+            max: 1,
+            time: 15000,
+            errors: ['time']
+        });
+
+        const winnaar = verzameld.first().author;
+
+        // Zelfde winnaar als vorige keer: streak omhoog, anders opnieuw beginnen
+        if (winnaar.id === streakUserId) {
+            streakAantal++;
+        } else {
+            streakUserId = winnaar.id;
+            streakAantal = 1;
+        }
+
+        // 10 punten, plus 5 extra voor elke vraag die je al achter elkaar goed had
+        const bonus = (streakAantal - 1) * 5;
+        const punten = 10 + bonus;
+
+        db.run(
+            `INSERT INTO scores (userId, username, points) VALUES (?, ?, ?)
+             ON CONFLICT(userId) DO UPDATE SET
+                 username = excluded.username,
+                 points = points + excluded.points`,
+            [winnaar.id, winnaar.username, punten]
+        );
+
+        let tekst = `✅ **${winnaar.username}** heeft het goed! +${punten} punten`;
+        if (streakAantal > 1) {
+            tekst += `\n🔥 Winstreak van ${streakAantal}! (+${bonus} bonus)`;
+        }
+        message.channel.send(tekst);
+    } catch (error) {
+        streakUserId = null;
+        streakAantal = 0;
+        message.channel.send(`⏰ Tijd is om! Het antwoord was: **${gekozen.antwoord}**`);
+    } finally {
+        streakVraagBezig = false;
+    }
+});
