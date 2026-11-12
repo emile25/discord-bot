@@ -27,4 +27,4 @@ db.serialize(() => {
     console.log('Testdata succesvol ingeladen in de database! ');
 });
 
-module.exports = db;
+module.exports = db;    
