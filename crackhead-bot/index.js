@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
 const db = require('./database'); // Laadt je SQLite database in
 
 const client = new Client({
@@ -13,8 +13,19 @@ const client = new Client({
 client.once('ready', async () => {
     console.log(`Ingelogd als ${client.user.tag}!`);
 
+    // Registreer het /leaderboard commando automatisch bij het opstarten
+    const leaderboardCommand = new SlashCommandBuilder()
+        .setName('leaderboard')
+        .setDescription('Bekijk de top scores van Crackhead Deluxe!');
+
+    try {
+        await client.application.commands.create(leaderboardCommand);
+        console.log('Slash-command /leaderboard geregistreerd! 🏆');
+    } catch (error) {
+        console.error('Fout bij registreren slash-command:', error);
+    }
+
     const channelId = '1569634733002985546';
-    
     try {
         const channel = await client.channels.fetch(channelId);
         if (channel) {
@@ -25,19 +36,45 @@ client.once('ready', async () => {
     }
 });
 
+// Simpele ping commando
 client.on('messageCreate', message => {
     if (message.content === '!ping') {
         message.reply('ik haat je STOP MET PINGEN');
     }
 });
 
-// Log in via de beveiligde environment variabele uit je .env bestand
-client.login(process.env.DISCORD_TOKEN);
+// Slash-command afhandeling voor /leaderboard
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
 
+    if (interaction.commandName === 'leaderboard') {
+        db.all(`SELECT username, points FROM scores ORDER BY points DESC LIMIT 10`, async (err, rows) => {
+            if (err) {
+                console.error('Fout bij ophalen leaderboard:', err);
+                return interaction.reply({ content: 'Oeps, kon het leaderboard niet laden!', ephemeral: true });
+            }
 
+            if (rows.length === 0) {
+                return interaction.reply('Er staan nog geen scores in de database!');
+            }
 
+            let leaderboardText = '';
+            rows.forEach((row, index) => {
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                else medal = `\`${index + 1}.\``;
 
+                leaderboardText += `${medal} **${row.username}** — *${row.points} punten*\n`;
+            });
 
+            await interaction.reply({
+                content: `🏆 **CRACKHEAD DELUXE - LEADERBOARD** 🏆\n\n${leaderboardText}`
+            });
+        });
+    }
+});
 
 // Vragenlijst: antwoord altijd in kleine letters
 const vragen = [
@@ -46,28 +83,26 @@ const vragen = [
     { vraag: 'Welke kleur krijg je als je blauw en geel mengt?', antwoord: 'groen' },
     { vraag: 'Hoe heet de hoofdstad van Nederland?', antwoord: 'amsterdam' },
     { vraag: 'Hoeveel dagen heeft een week?', antwoord: '7' },
-    {vraag: 'Wat is de grootste planeet in ons zonnestelsel?', antwoord: 'jupiter' },
-    {vraag: 'Wat is de hoofdstad van Italië?', antwoord: 'rome' },
-    {vraag: 'Hoeveel continenten zijn er op aarde?', antwoord: '7' },
-    {vraag: 'Wat is de langste rivier ter wereld?', antwoord: 'nijl' },
-    {vraag: 'Welke planeet staat bekend als de rode planeet?', antwoord: 'mars' },
-    {vraag: 'Wat is de hoofdstad van Spanje?', antwoord: 'madrid' },
-    {vraag: 'Hoeveel tanden heeft een volwassen mens gemiddeld?', antwoord: '32' },
-    {vraag: 'Wat is de grootste oceaan ter wereld?', antwoord: 'stille oceaan' },
-    {vraag: 'Welke planeet staat het dichtst bij de zon?', antwoord: 'mercurius' },
-    {vraag: 'Welke dubbel moet je gooien in darts als je 32 scoren over hebt?', antwoord: 'dubbel 16' },
-    
+    { vraag: 'Wat is de grootste planeet in ons zonnestelsel?', antwoord: 'jupiter' },
+    { vraag: 'Wat is de hoofdstad van Italië?', antwoord: 'rome' },
+    { vraag: 'Hoeveel continenten zijn er op aarde?', antwoord: '7' },
+    { vraag: 'Wat is de langste rivier ter wereld?', antwoord: 'nijl' },
+    { vraag: 'Welke planeet staat bekend als de rode planeet?', antwoord: 'mars' },
+    { vraag: 'Wat is de hoofdstad van Spanje?', antwoord: 'madrid' },
+    { vraag: 'Hoeveel tanden heeft een volwassen mens gemiddeld?', antwoord: '32' },
+    { vraag: 'Wat is de grootste oceaan ter wereld?', antwoord: 'stille oceaan' },
+    { vraag: 'Welke planeet staat het dichtst bij de zon?', antwoord: 'mercurius' },
+    { vraag: 'Welke dubbel moet je gooien in darts als je 32 scoren over hebt?', antwoord: 'dubbel 16' },
 ];
 
+// Normale trivia vraag: !vraag
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     if (message.content !== '!vraag') return;
 
-    // Kies een willekeurige vraag
     const gekozen = vragen[Math.floor(Math.random() * vragen.length)];
     await message.channel.send(`🧠 **Vraag:** ${gekozen.vraag}\nJullie hebben 15 seconden!`);
 
-    // Alleen een goed antwoord van een echte gebruiker telt
     const filter = (m) =>
         !m.author.bot && m.content.trim().toLowerCase() === gekozen.antwoord;
 
@@ -81,7 +116,6 @@ client.on('messageCreate', async (message) => {
 
         const winnaar = verzameld.first().author;
 
-        // 10 punten opslaan in de database
         db.run(
             `INSERT INTO scores (userId, username, points) VALUES (?, ?, ?)
              ON CONFLICT(userId) DO UPDATE SET
@@ -96,12 +130,7 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-
-
-
-// ---- Aparte quiz met winstreak: !streakvraag ----
-// Gebruikt de lijst "vragen" van het !vraag-blok hierboven. Die lijst mag je niet weghalen.
-
+// Winstreak quiz: !streakvraag
 let streakUserId = null;
 let streakAantal = 2;
 let streakVraagBezig = false;
@@ -131,7 +160,6 @@ client.on('messageCreate', async (message) => {
 
         const winnaar = verzameld.first().author;
 
-        // Zelfde winnaar als vorige keer: streak omhoog, anders opnieuw beginnen
         if (winnaar.id === streakUserId) {
             streakAantal++;
         } else {
@@ -139,7 +167,6 @@ client.on('messageCreate', async (message) => {
             streakAantal = 1;
         }
 
-        // 10 punten, plus 5 extra voor elke vraag die je al achter elkaar goed had
         const bonus = (streakAantal - 1) * 5;
         const punten = 10 + bonus;
 
@@ -164,6 +191,7 @@ client.on('messageCreate', async (message) => {
         streakVraagBezig = false;
     }
 });
+
 
 
 
@@ -214,3 +242,7 @@ if (message.content.startsWith('!roast')) {
 
  
 });
+
+// Log in via de beveiligde environment variabele uit je .env bestand
+client.login(process.env.DISCORD_TOKEN);
+
