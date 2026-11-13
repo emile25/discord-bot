@@ -164,3 +164,53 @@ client.on('messageCreate', async (message) => {
         streakVraagBezig = false;
     }
 });
+
+
+
+
+
+
+// ---- Extra commando's ----
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+
+    // !munt: kop of munt
+    if (message.content === '!munt') {
+        const uitslag = Math.random() < 0.5 ? 'KOP' : 'MUNT';
+        message.reply(`🪙 Het is **${uitslag}**. Zeur er niet over.`);
+    }
+
+    // !dobbel: dobbelsteen van 1 tot 6
+    if (message.content === '!dobbel') {
+        const worp = Math.floor(Math.random() * 6) + 1;
+        const tekst = worp === 6 ? 'Verdomme, een 6!' : worp === 1 ? 'Een 1, wat een sukkel.' : '';
+        message.reply(`🎲 Je gooide **${worp}**. ${tekst}`);
+    }
+
+  // !roast @iemand: de bot scheldt iemand (lief) uit
+if (message.content.startsWith('!roast')) {
+    const doelwit = message.mentions.users.first();
+    if (!doelwit) {
+        return message.reply('Wie moet ik roasten, sukkel? Gebruik: `!roast @iemand`');
+    }
+    const roasts = [
+        'heeft het brein van een afgekloven kippenpoot.',
+        'is zo traag dat zelfs de bot erbij in slaap valt.',
+        'zou een wedstrijd verliezen van een slak op een skateboard.',
+        'denkt dat 2 + 2 = 5 is. Echt een wiskundig genie.',
+        'zou verliezen in een wedstrijd "wie kan het langst stil zijn".',
+    ];
+    const roast = roasts[Math.floor(Math.random() * roasts.length)];
+    message.channel.send(`${doelwit} ${roast}`);
+}
+
+    // !streak: wie heeft nu een winstreak (werkt met !streakvraag)
+    if (message.content === '!streak') {
+        if (!streakUserId || streakAantal === 0) {
+            return message.reply('Niemand heeft een winstreak. Jullie zijn allemaal slappe lullen.');
+        }
+        message.channel.send(`🔥 <@${streakUserId}> heeft een winstreak van **${streakAantal}**. Pak hem af als je durft!`);
+    }
+
+ 
+});
